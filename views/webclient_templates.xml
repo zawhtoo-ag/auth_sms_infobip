@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Override the entire web.login template -->
+    <template id="login" inherit_id="web.login" priority="100">
+        <xpath expr="." position="replace">
+            <t t-call="web.layout">
+                <t t-set="head">
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"/>
+                    <script src="https://code.jquery.com/jquery-3.6.0.min.js" type="text/javascript"/>
+                    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js" type="text/javascript"/>
+                </t>
+                <div id="wrapwrap">
+                    <main>
+                        <div class="container mt-5">
+                            <div class="row justify-content-center">
+                                <div class="col-md-6">
+                                    <div class="card shadow-sm">
+                                        <div class="card-body">
+                                            <h2 class="card-title text-center mb-4">Login</h2>
+                                            <ul class="nav nav-tabs mb-4" role="tablist">
+                                                <li class="nav-item">
+                                                    <a class="nav-link active" id="email-tab" data-toggle="tab" href="#email-login" role="tab">Email</a>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <a class="nav-link" id="phone-tab" data-toggle="tab" href="#phone-login" role="tab">Phone Number</a>
+                                                </li>
+                                            </ul>
+                                            <div class="tab-content">
+                                                <div class="tab-pane fade show active" id="email-login" role="tabpanel">
+                                                    <form method="post" t-attf-action="/web/login?redirect=#{redirect or ''}">
+                                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                        <t t-if="error">
+                                                            <div class="alert alert-danger"><t t-esc="error"/></div>
+                                                        </t>
+                                                        <div class="form-group mb-3">
+                                                            <label for="login">Email</label>
+                                                            <input type="email" name="login" class="form-control" required="required" placeholder="Enter your email"/>
+                                                        </div>
+                                                        <div class="form-group mb-3">
+                                                            <label for="password">Password</label>
+                                                            <input type="password" name="password" class="form-control" required="required" placeholder="Enter your password"/>
+                                                        </div>
+                                                        <button type="submit" class="btn btn-primary btn-block">Login</button>
+                                                    </form>
+                                                </div>
+                                                <div class="tab-pane fade" id="phone-login" role="tabpanel">
+                                                    <form method="post" t-attf-action="/web/login?redirect=#{redirect or ''}">
+                                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                        <t t-if="error">
+                                                            <div class="alert alert-danger"><t t-esc="error"/></div>
+                                                        </t>
+                                                        <div class="form-group mb-3">
+                                                            <label for="phone_number">Phone Number</label>
+                                                            <input type="tel" name="phone_number" class="form-control" required="required" placeholder="e.g., +6591234567"/>
+                                                        </div>
+                                                        <button type="submit" class="btn btn-primary btn-block">Send OTP</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </t>
+        </xpath>
+    </template>
+
+    <template id="login_otp_verify" name="OTP Verification">
+        <t t-call="web.layout">
+            <t t-set="head">
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"/>
+                <script src="https://code.jquery.com/jquery-3.6.0.min.js" type="text/javascript"/>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js" type="text/javascript"/>
+            </t>
+            <div id="wrapwrap">
+                <main>
+                    <div class="container mt-5">
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <div class="card shadow-sm">
+                                    <div class="card-body">
+                                        <h2 class="card-title text-center mb-4">Verify OTP</h2>
+                                        <t t-if="error">
+                                            <div class="alert alert-danger"><t t-esc="error"/></div>
+                                        </t>
+                                        <form method="post" t-attf-action="/web/login/verify_otp?redirect=#{redirect or ''}">
+                                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                            <input type="hidden" name="phone_number" t-att-value="phone_number"/>
+                                            <input type="hidden" name="otp_id" t-att-value="otp_id"/>
+                                            <div class="form-group mb-3">
+                                                <label for="otp_code">Enter OTP sent to <t t-esc="phone_number"/></label>
+                                                <input type="text" name="otp_code" class="form-control" required="required" placeholder="Enter 6-digit OTP"/>
+                                            </div>
+                                            <div class="mb-3" id="otp-container" t-att-data-expiry="remaining_time" t-att-data-csrf="request.csrf_token()" t-att-data-phone="phone_number">
+                                                <span id="otp-timer">Time remaining: <t t-esc="remaining_time"/> seconds</span>
+                                                <a href="#" id="resend-otp" class="d-none ml-3">Resend OTP</a>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary btn-block">Verify OTP</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+            <t t-call="web.html_container">
+                <script type="text/javascript">
+                    <![CDATA[
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var container = document.getElementById('otp-container');
+                        var expiryTime = parseInt(container.getAttribute('data-expiry'));
+                        var csrfToken = container.getAttribute('data-csrf');
+                        var phone = container.getAttribute('data-phone');
+                        var timerElement = document.getElementById('otp-timer');
+                        var resendLink = document.getElementById('resend-otp');
+
+                        if (isNaN(expiryTime)) {
+                            console.error('Invalid expiry time:', container.getAttribute('data-expiry'));
+                            timerElement.textContent = 'Error: Invalid expiry time';
+                            return;
+                        }
+
+                        var interval = setInterval(function() {
+                            expiryTime--;
+                            timerElement.textContent = 'Time remaining: ' + expiryTime + ' seconds';
+                            if (expiryTime <= 0) {
+                                clearInterval(interval);
+                                timerElement.textContent = 'OTP expired';
+                                resendLink.classList.remove('d-none');
+                            }
+                        }, 1000);
+
+                        resendLink.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            fetch('/web/login/resend_otp', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': csrfToken
+                                },
+                                body: JSON.stringify({ phone_number: phone })
+                            }).then(response => response.json())
+                              .then(data => {
+                                  if (data.success) {
+                                      window.location.reload();
+                                  } else {
+                                      alert('Failed to resend OTP: ' + data.error);
+                                  }
+                              }).catch(error => {
+                                  console.error('Error resending OTP:', error);
+                                  alert('Failed to resend OTP');
+                              });
+                        });
+                    });
+                    ]]>
+                </script>
+            </t>
+        </t>
+    </template>
+</odoo>
