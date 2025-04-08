@@ -1,0 +1,40 @@
+/* File: auth_sms_infobip/static/src/css/auth_sms_infobip.css */
+.tabbed-login .nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+.tabbed-login .nav-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+.tabbed-login .nav-tabs .nav-link.active {
+    color: #714b67;
+    border-bottom: 2px solid #714b67;
+    background-color: transparent;
+}
+.tabbed-login .nav-tabs .nav-link:hover {
+    color: #714b67;
+}
+.tabbed-login .tab-content {
+    padding: 20px 0;
+}
+.oe_login_form .form-label {
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+.oe_login_form .form-control {
+    border-radius: 4px;
+    padding: 10px;
+}
+.oe_login_buttons .btn-primary {
+    background-color: #714b67;
+    border-color: #714b67;
+    padding: 10px;
+    font-weight: 500;
+}
+.oe_login_buttons .btn-primary:hover {
+    background-color: #5e3f56;
+    border-color: #5e3f56;
+}

@@ -1,55 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="res_config_settings_view_form_inherit_sms_infobip" model="ir.ui.view">
-        <field name="name">auth_sms_infobip.res_config_settings_form</field>
+    <record id="res_config_settings_view_form_inherit_auth_sms_infobip" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.auth_sms_infobip</field>
         <field name="model">res.config.settings</field>
-        <field name="inherit_id" ref="website.res_config_settings_view_form"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//form" position="inside">
-                <app data-string="SMS OTP Authentication" string="SMS OTP Authentication" name="auth_sms_infobip" invisible="not website_id">
-                    <block title="SMS OTP Authentication" id="auth_sms_infobip_settings">
-                        <setting id="auth_sms_infobip_otp_config" colspan="4">
-                            <h3>OTP Configuration</h3>
+                <app data-string="Infobip Settings" string="Infobip Settings" name="infobip_settings">
+                    <block title="Infobip SMS Configuration" id="infobip_sms_config">
+                        <setting id="infobip_api_key_setting" help="Enter your Infobip API key to enable SMS authentication.">
                             <div class="content-group">
-                                <div class="row mt16">
-                                    <field name="enable_otp_signup" class="oe_inline"/>
-                                    <label for="enable_otp_signup" string="Enable OTP for Signup"/>
-                                </div>
-                                <div class="row mt16">
-                                    <field name="enable_otp_login" class="oe_inline"/>
-                                    <label for="enable_otp_login" string="Enable OTP for Login"/>
-                                </div>
-                                <div class="row mt16">
-                                    <label for="otp_expiry_time" class="col-lg-3 o_light_label" string="OTP Expiry Time (seconds)"/>
-                                    <field name="otp_expiry_time" class="oe_inline"/>
-                                </div>
-                                <div class="row mt16">
-                                    <label for="otp_type" class="col-lg-3 o_light_label" string="OTP Type"/>
-                                    <field name="otp_type" class="oe_inline"/>
+                                <div class="row mt8">
+                                    <label class="col-lg-3 o_light_label" string="Infobip API Key" for="infobip_api_key"/>
+                                    <field name="infobip_api_key" placeholder="e.g., 29e32ce49d7cba2f2516"/>
                                 </div>
                             </div>
                         </setting>
-                        <setting id="auth_sms_infobip_gateway_config" colspan="4">
-                            <h3>Infobip SMS Gateway</h3>
+                        <setting id="infobip_sender_id_setting" help="Specify the Sender ID for SMS messages.">
                             <div class="content-group">
-                                <div class="row mt16">
-                                    <label for="infobip_api_key" class="col-lg-3 o_light_label" string="Infobip API Key"/>
-                                    <field name="infobip_api_key" class="oe_inline"/>
+                                <div class="row mt8">
+                                    <label class="col-lg-3 o_light_label" string="Sender ID" for="infobip_sender_id"/>
+                                    <field name="infobip_sender_id" placeholder="e.g., 6582400211"/>
                                 </div>
-                                <div class="row mt16">
-                                    <label for="infobip_sender_id" class="col-lg-3 o_light_label" string="Infobip Sender ID"/>
-                                    <field name="infobip_sender_id" class="oe_inline"/>
+                            </div>
+                        </setting>
+                        <setting id="infobip_otp_method_setting" help="Choose the method for sending OTPs.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label class="col-lg-3 o_light_label" string="OTP Method" for="infobip_otp_method"/>
+                                    <field name="infobip_otp_method" widget="radio" options="{'horizontal': true}"/>
                                 </div>
-                                <div class="row mt16">
-                                    <label for="infobip_sms_method" class="col-lg-3 o_light_label" string="SMS Method"/>
-                                    <field name="infobip_sms_method" class="oe_inline"/>
+                            </div>
+                        </setting>
+                        <setting id="infobip_twofa_app_id_setting" invisible="infobip_otp_method == 'standard'" help="Enter the 2FA Application ID for Infobip 2FA.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label class="col-lg-3 o_light_label" string="2FA Application ID" for="infobip_twofa_app_id"/>
+                                    <field name="infobip_twofa_app_id" placeholder="Enter 2FA Application ID"/>
                                 </div>
-                                <div class="row mt16">
-                                    <label for="infobip_2fa_app_id" class="col-lg-3 o_light_label" string="Infobip 2FA App ID"/>
-                                    <field name="infobip_2fa_app_id" class="oe_inline" invisible="infobip_sms_method == 'sms'"/>
-                                </div>
-                                <div class="row mt16">
-                                    <label for="infobip_2fa_message_id" class="col-lg-3 o_light_label" string="Infobip 2FA Message ID"/>
-                                    <field name="infobip_2fa_message_id" class="oe_inline" invisible="infobip_sms_method == 'sms'"/>
+                            </div>
+                        </setting>
+                        <setting id="infobip_twofa_message_id_setting" invisible="infobip_otp_method == 'standard'" help="Enter the 2FA Message ID for Infobip 2FA.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label class="col-lg-3 o_light_label" string="2FA Message ID" for="infobip_twofa_message_id"/>
+                                    <field name="infobip_twofa_message_id" placeholder="Enter 2FA Message ID"/>
                                 </div>
                             </div>
                         </setting>

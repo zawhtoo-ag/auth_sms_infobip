@@ -1,3 +1,3 @@
+# File: auth_sms_infobip/models/__init__.py
+from . import api_test
 from . import res_config_settings
-from . import res_users
-from . import sms_otp

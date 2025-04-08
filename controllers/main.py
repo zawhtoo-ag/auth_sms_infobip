@@ -1,62 +1,122 @@
+# File: auth_sms_infobip/controllers/main.py
+import random
+import string
+import requests
+import logging
 from odoo import http
 from odoo.http import request
-from odoo.addons.web.controllers.session import Session  # Import Session instead of Home
 
-class AuthSMSInfobip(Session):  # Inherit from Session instead of Home
-    @http.route('/web/login', type='http', auth="none", methods=['GET', 'POST'], csrf=True)
-    def web_login(self, redirect=None, **kw):
-        if request.httprequest.method == 'POST':
-            if kw.get('phone_number'):
-                # Handle phone number login
-                phone_number = kw.get('phone_number')
-                # Generate OTP (simplified example)
-                otp_id, otp_code, expiry_time = self._generate_otp(phone_number)
-                if not otp_id:
-                    return request.render('auth_sms_infobip.login_inherit', {
-                        'error': 'Failed to send OTP',
-                        'redirect': redirect
-                    })
-                return request.render('auth_sms_infobip.login_otp_verify', {
-                    'phone_number': phone_number,
-                    'otp_id': otp_id,
-                    'remaining_time': expiry_time,
-                    'redirect': redirect
-                })
-        # Fallback to default login behavior
-        return super(AuthSMSInfobip, self).web_login(redirect=redirect, **kw)
+_logger = logging.getLogger(__name__)
 
-    @http.route('/web/login/verify_otp', type='http', auth="none", methods=['POST'], csrf=True)
-    def verify_otp(self, redirect=None, **kw):
-        phone_number = kw.get('phone_number')
-        otp_id = kw.get('otp_id')
-        otp_code = kw.get('otp_code')
-        # Verify OTP (simplified example)
-        user = self._verify_otp(phone_number, otp_id, otp_code)
+class AuthSMSInfobip(http.Controller):
+
+    def _get_infobip_config(self):
+        """Retrieve Infobip configuration from ir.config_parameter."""
+        config = {
+            'api_key': request.env['ir.config_parameter'].sudo().get_param('auth_sms_infobip.api_key'),
+            'sender_id': request.env['ir.config_parameter'].sudo().get_param('auth_sms_infobip.sender_id'),
+            'otp_method': request.env['ir.config_parameter'].sudo().get_param('auth_sms_infobip.otp_method', 'standard'),
+            'twofa_app_id': request.env['ir.config_parameter'].sudo().get_param('auth_sms_infobip.twofa_app_id'),
+            'twofa_message_id': request.env['ir.config_parameter'].sudo().get_param('auth_sms_infobip.twofa_message_id'),
+        }
+        _logger.info("Retrieved Infobip config: %s", config)
+        return config
+
+    @http.route('/web/send_otp', type='json', auth='public', methods=['POST'])
+    def send_otp(self, phone=None):
+        if not phone:
+            return {'success': False, 'error': 'Phone number is required'}
+
+        # Retrieve Infobip configuration
+        config = self._get_infobip_config()
+        api_key = config['api_key']
+        sender_id = config['sender_id']
+        otp_method = config['otp_method']
+        twofa_app_id = config['twofa_app_id']
+        twofa_message_id = config['twofa_message_id']
+
+        if not api_key:
+            return {'success': False, 'error': 'Infobip API key not configured'}
+        if not sender_id:
+            return {'success': False, 'error': 'Sender ID not configured'}
+
+        # Generate a 6-digit OTP
+        otp = ''.join(random.choices(string.digits, k=6))
+        request.session['otp'] = otp
+        request.session['phone'] = phone
+
+        # Send OTP via Infobip
+        try:
+            if otp_method == '2fa' and twofa_app_id and twofa_message_id:
+                # Use Infobip 2FA API
+                url = f"https://api.infobip.com/2fa/2/pin?applicationId={twofa_app_id}&messageId={twofa_message_id}"
+                payload = {
+                    "to": phone,
+                    "pinType": "NUMERIC",
+                    "pinLength": 6,
+                }
+                headers = {
+                    "Authorization": f"App {api_key}",
+                    "Content-Type": "application/json",
+                }
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
+                response.raise_for_status()
+                _logger.info("Sent 2FA OTP to %s: %s", phone, response.text)
+            else:
+                # Use standard SMS API
+                url = "https://api.infobip.com/sms/2/text/advanced"
+                headers = {
+                    "Authorization": f"App {api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                }
+                payload = {
+                    "messages": [
+                        {
+                            "from": sender_id,
+                            "destinations": [{"to": phone}],
+                            "text": f"Your OTP is {otp}",
+                        }
+                    ]
+                }
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
+                response.raise_for_status()
+                _logger.info("Sent standard SMS OTP to %s: %s", phone, response.text)
+            return {'success': True}
+        except requests.exceptions.RequestException as e:
+            _logger.error("Failed to send OTP to %s: %s", phone, str(e))
+            return {'success': False, 'error': str(e)}
+
+    @http.route('/web/login_phone', type='http', auth='public', methods=['POST'], website=True, sitemap=False)
+    def login_phone(self, **post):
+        phone = post.get('phone')
+        otp = post.get('otp')
+        db = post.get('db')
+
+        if not phone or not otp:
+            return request.redirect(f"/web/login?db={db}&error=Phone number and OTP are required")
+
+        # Verify OTP
+        session_otp = request.session.get('otp')
+        session_phone = request.session.get('phone')
+        if not session_otp or not session_phone or session_otp != otp or session_phone != phone:
+            return request.redirect(f"/web/login?db={db}&error=Invalid OTP")
+
+        # Find or create user
+        user = request.env['res.users'].sudo().search([('login', '=', phone)], limit=1)
         if not user:
-            return request.render('auth_sms_infobip.login_otp_verify', {
-                'error': 'Invalid OTP',
-                'phone_number': phone_number,
-                'otp_id': otp_id,
-                'remaining_time': 60,  # Reset or fetch remaining time
-                'redirect': redirect
+            user = request.env['res.users'].sudo().create({
+                'name': phone,
+                'login': phone,
+                'phone': phone,
+                'email': f"{phone}@sms-login-placeholder.com",
+                'password': ''.join(random.choices(string.ascii_letters + string.digits, k=16)),
             })
-        # Log the user in
-        request.session.authenticate(request.db, user.login, {'password': None})
-        return request.redirect(redirect or '/web')
 
-    @http.route('/web/login/resend_otp', type='http', auth="none", methods=['POST'], csrf=False)
-    def resend_otp(self, **kw):
-        phone_number = kw.get('phone_number')
-        otp_id, otp_code, expiry_time = self._generate_otp(phone_number)
-        if otp_id:
-            return request.make_response({'success': True}, headers={'Content-Type': 'application/json'})
-        return request.make_response({'success': False, 'error': 'Failed to resend OTP'}, headers={'Content-Type': 'application/json'})
-
-    def _generate_otp(self, phone_number):
-        # Placeholder: Implement OTP generation and sending via Infobip
-        return "otp_123", "123456", 60  # otp_id, otp_code, expiry_time
-
-    def _verify_otp(self, phone_number, otp_id, otp_code):
-        # Placeholder: Implement OTP verification
-        user = request.env['res.users'].sudo().search([('phone', '=', phone_number)], limit=1)
-        return user if user and otp_code == "123456" else False
+        # Authenticate the user
+        try:
+            request.session.authenticate(db, user.login, user.password)
+            return request.redirect('/web')
+        except Exception as e:
+            _logger.error("Failed to authenticate user with phone %s: %s", phone, str(e))
+            return request.redirect(f"/web/login?db={db}&error=Authentication failed")

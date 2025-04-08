@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View for auth_sms_infobip.api_test -->
+    <record id="view_auth_sms_infobip_api_test_tree" model="ir.ui.view">
+        <field name="name">auth_sms_infobip.api_test.tree</field>
+        <field name="model">auth_sms_infobip.api_test</field>
+        <field name="type">list</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="phone_number"/>
+                <field name="status"/>
+                <field name="response_message"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View for auth_sms_infobip.api_test -->
+    <record id="view_auth_sms_infobip_api_test_form" model="ir.ui.view">
+        <field name="name">auth_sms_infobip.api_test.form</field>
+        <field name="model">auth_sms_infobip.api_test</field>
+        <field name="type">form</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_test_api" string="Test API" type="object" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="name" required="1"/>
+                        <field name="phone_number" required="1"/>
+                    </group>
+                    <group>
+                        <field name="status" readonly="1"/>
+                        <field name="response_message" readonly="1"/>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to Open the API Test Views -->
+    <record id="action_auth_sms_infobip_api_test" model="ir.actions.act_window">
+        <field name="name">Test API</field>
+        <field name="res_model">auth_sms_infobip.api_test</field>
+        <field name="view_mode">list,form</field> <!-- Changed from tree,form to list,form -->
+        <field name="view_id" ref="view_auth_sms_infobip_api_test_tree"/>
+    </record>
+
+    <!-- Menu Item for API Test -->
+    <menuitem id="menu_auth_sms_infobip_api_test_root" name="Infobip API Test" parent="base.menu_administration" sequence="10"/>
+    <menuitem id="menu_auth_sms_infobip_api_test" name="Test API" parent="menu_auth_sms_infobip_api_test_root" action="action_auth_sms_infobip_api_test" sequence="10"/>
+</odoo>
